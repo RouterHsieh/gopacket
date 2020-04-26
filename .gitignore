@@ -27,6 +27,7 @@ _testmain.go
 examples/synscan/synscan
 examples/pfdump/pfdump
 examples/pcapdump/pcapdump
+examples/afdump/afdump
 examples/httpassembly/httpassembly
 examples/statsassembly/statsassembly
 examples/arpscan/arpscan
