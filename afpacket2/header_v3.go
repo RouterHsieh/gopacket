@@ -35,11 +35,11 @@ func newV3Wrapper(rawPtr unsafe.Pointer) v3wrapper {
 }
 
 func (v3 *v3wrapper) getStatus() int {
-	return int(atomic.LoadUint32(&v3.packet.Status))
+	return int(atomic.LoadUint32(&v3.blockhdr.Block_status))
 }
 
 func (v3 *v3wrapper) clearStatus() {
-	atomic.StoreUint32(&v3.packet.Status, 0)
+	atomic.StoreUint32(&v3.blockhdr.Block_status, 0)
 }
 
 func (v3 *v3wrapper) getTime() time.Time {
@@ -65,11 +65,11 @@ func (v3 *v3wrapper) next() bool {
 	if v3.used >= v3.blockhdr.Num_pkts {
 		return false
 	}
-	offset := uintptr(0)
+	var offset uintptr
 	if v3.packet.Next_offset != 0 {
-		offset += uintptr(v3.packet.Next_offset)
+		offset = uintptr(v3.packet.Next_offset)
 	} else {
-		offset += uintptr(tpAlign(int(v3.packet.Snaplen) + int(v3.packet.Mac)))
+		offset = uintptr(tpAlign(int(v3.packet.Snaplen) + int(v3.packet.Mac)))
 	}
 	v3.packet = (*unix.Tpacket3Hdr)(unsafe.Pointer(uintptr(unsafe.Pointer(v3.packet)) + offset))
 	return true
