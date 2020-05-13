@@ -22,7 +22,6 @@ func main() {
 		afpacket2.OptFrameSize(*snaplen),
 		afpacket2.OptBlockSize(*snaplen*128),
 		afpacket2.OptTPacketVersion(*tpVersion),
-		//afpacket2.OptPollTimeout(100),
 	)
 	if err != nil {
 		log.Fatal(err)

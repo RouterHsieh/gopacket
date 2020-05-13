@@ -271,12 +271,12 @@ func (h *TPacket) getTPacketHeader() header {
 		if h.offset >= h.opts.framesPerBlock*h.opts.numBlocks {
 			h.offset = 0
 		}
-		return newV1Header(unsafe.Pointer(uintptr(h.rawring) + uintptr(h.opts.frameSize*h.offset)))
+		return (*v1header)(unsafe.Pointer(uintptr(h.rawring) + uintptr(h.opts.frameSize*h.offset)))
 	case TPacketVersion2:
 		if h.offset >= h.opts.framesPerBlock*h.opts.numBlocks {
 			h.offset = 0
 		}
-		return newV2Header(unsafe.Pointer(uintptr(h.rawring) + uintptr(h.opts.frameSize*h.offset)))
+		return (*v2header)(unsafe.Pointer(uintptr(h.rawring) + uintptr(h.opts.frameSize*h.offset)))
 	case TPacketVersion3:
 		// TPacket3 uses each block to return values, instead of each frame.  Hence we need to rotate when we hit #blocks, not #frames.
 		if h.offset >= h.opts.numBlocks {

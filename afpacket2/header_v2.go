@@ -16,44 +16,32 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-type v2header struct {
-	tpHeader *unix.Tpacket2Hdr
-	sll      *unix.RawSockaddrLinklayer
-	data     []byte
-}
-
-func newV2Header(rawPtr unsafe.Pointer) *v2header {
-	h := (*unix.Tpacket2Hdr)(rawPtr)
-	v2 := &v2header{
-		tpHeader: h,
-		sll:      (*unix.RawSockaddrLinklayer)(unsafe.Pointer(uintptr(rawPtr) + uintptr(tpAlign(int(unix.SizeofTpacket2Hdr))))),
-		data:     makeSlice(uintptr(rawPtr)+uintptr(h.Mac), int(h.Snaplen)),
-	}
-	return v2
-}
+type v2header unix.Tpacket2Hdr
 
 func (v2 *v2header) getStatus() int {
-	return int(atomic.LoadUint32(&v2.tpHeader.Status))
+	return int(atomic.LoadUint32(&v2.Status))
 }
 
 func (v2 *v2header) clearStatus() {
-	atomic.StoreUint32(&v2.tpHeader.Status, 0)
+	atomic.StoreUint32(&v2.Status, 0)
 }
 
 func (v2 *v2header) getTime() time.Time {
-	return time.Unix(int64(v2.tpHeader.Sec), int64(v2.tpHeader.Nsec))
+	return time.Unix(int64(v2.Sec), int64(v2.Nsec))
 }
 
 func (v2 *v2header) getData(opt *options) []byte {
-	return insertVlanHeader(v2.data, int(v2.tpHeader.Vlan_tci), opt)
+	data := makeSlice(uintptr(unsafe.Pointer(v2))+uintptr(v2.Mac), int(v2.Snaplen))
+	return insertVlanHeader(data, int(v2.Vlan_tci), opt)
 }
 
 func (v2 *v2header) getLength() int {
-	return int(v2.tpHeader.Len)
+	return int(v2.Len)
 }
 
 func (v2 *v2header) getIfaceIndex() int {
-	return int(v2.sll.Ifindex)
+	sll := (*unix.RawSockaddrLinklayer)(unsafe.Pointer(uintptr(unsafe.Pointer(v2)) + uintptr(tpAlign(int(unix.SizeofTpacket2Hdr)))))
+	return int(sll.Ifindex)
 }
 
 func (v2 *v2header) next() bool {
