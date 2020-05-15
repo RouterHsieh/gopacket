@@ -9,6 +9,7 @@
 package afpacket2
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"runtime"
@@ -86,11 +87,13 @@ type TPacket struct {
 var _ gopacket.ZeroCopyPacketDataSource = &TPacket{}
 
 // htons converts a short (uint16) from host-to-network byte order.
-// Thanks to mikioh for this neat trick:
-// https://github.com/mikioh/-stdyng/blob/master/afpacket.go
 func htons(i uint16) uint16 {
-	return (i<<8)&0xff00 | i>>8
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, i)
+	return *(*uint16)(unsafe.Pointer(&b[0]))
 }
+
+var sockoptProtocolEthAll = int(htons(unix.ETH_P_ALL))
 
 // NewTPacket returns a new TPacket object for reading packets off the wire.
 // Its behavior may be modified by passing in any/all of afpacket.Opt* to this
@@ -102,7 +105,7 @@ func NewTPacket(opts ...interface{}) (h *TPacket, err error) {
 	if h.opts, err = parseOptions(opts...); err != nil {
 		return nil, err
 	}
-	fd, err := unix.Socket(unix.AF_PACKET, int(h.opts.socktype), int(htons(unix.ETH_P_ALL)))
+	fd, err := unix.Socket(unix.AF_PACKET, int(h.opts.socktype), sockoptProtocolEthAll)
 	if err != nil {
 		return nil, err
 	}
@@ -271,12 +274,14 @@ func (h *TPacket) getTPacketHeader() header {
 		if h.offset >= h.opts.framesPerBlock*h.opts.numBlocks {
 			h.offset = 0
 		}
-		return (*v1header)(unsafe.Pointer(uintptr(h.rawring) + uintptr(h.opts.frameSize*h.offset)))
+		position := uintptr(h.rawring) + uintptr(h.opts.frameSize*h.offset)
+		return (*v1header)(unsafe.Pointer(position))
 	case TPacketVersion2:
 		if h.offset >= h.opts.framesPerBlock*h.opts.numBlocks {
 			h.offset = 0
 		}
-		return (*v2header)(unsafe.Pointer(uintptr(h.rawring) + uintptr(h.opts.frameSize*h.offset)))
+		position := uintptr(h.rawring) + uintptr(h.opts.frameSize*h.offset)
+		return (*v2header)(unsafe.Pointer(position))
 	case TPacketVersion3:
 		// TPacket3 uses each block to return values, instead of each frame.  Hence we need to rotate when we hit #blocks, not #frames.
 		if h.offset >= h.opts.numBlocks {
